@@ -875,7 +875,7 @@ class SQLCompiler(Compiled):
                             binary.left._compiler_dispatch(self, **kw),
                             binary.right._compiler_dispatch(self, **kw)) \
             + (escape and
-                    (' ESCAPE ' + self.render_literal_value(escape, None))
+                    (' ESCAPE ' + self.render_literal_value(escape, sqltypes.String()))
                     or '')
 
     def visit_notlike_op_binary(self, binary, operator, **kw):
@@ -884,7 +884,7 @@ class SQLCompiler(Compiled):
                             binary.left._compiler_dispatch(self, **kw),
                             binary.right._compiler_dispatch(self, **kw)) \
             + (escape and
-                    (' ESCAPE ' + self.render_literal_value(escape, None))
+                    (' ESCAPE ' + self.render_literal_value(escape, sqltypes.String()))
                     or '')
 
     def visit_ilike_op_binary(self, binary, operator, **kw):
@@ -893,7 +893,7 @@ class SQLCompiler(Compiled):
                             binary.left._compiler_dispatch(self, **kw),
                             binary.right._compiler_dispatch(self, **kw)) \
             + (escape and
-                    (' ESCAPE ' + self.render_literal_value(escape, None))
+                    (' ESCAPE ' + self.render_literal_value(escape, sqltypes.String()))
                     or '')
 
     def visit_notilike_op_binary(self, binary, operator, **kw):
@@ -902,7 +902,7 @@ class SQLCompiler(Compiled):
                             binary.left._compiler_dispatch(self, **kw),
                             binary.right._compiler_dispatch(self, **kw)) \
             + (escape and
-                    (' ESCAPE ' + self.render_literal_value(escape, None))
+                    (' ESCAPE ' + self.render_literal_value(escape, sqltypes.String()))
                     or '')
 
     def visit_bindparam(self, bindparam, within_columns_clause=False,
@@ -954,9 +954,6 @@ class SQLCompiler(Compiled):
 
     def render_literal_bindparam(self, bindparam, **kw):
         value = bindparam.value
-        processor = bindparam.type._cached_bind_processor(self.dialect)
-        if processor:
-            value = processor(value)
         return self.render_literal_value(value, bindparam.type)
 
     def render_literal_value(self, value, type_):
@@ -969,25 +966,11 @@ class SQLCompiler(Compiled):
         of the DBAPI.
 
         """
-        if isinstance(value, util.string_types):
-            value = value.replace("'", "''")
-            return "'%s'" % value
-        elif value is None:
-            return "NULL"
-        elif isinstance(value, (float, ) + util.int_types):
-            return repr(value)
-        elif isinstance(value, decimal.Decimal):
-            return str(value)
-        elif isinstance(value, util.binary_type):
-            # only would occur on py3k b.c. on 2k the string_types
-            # directive above catches this.
-            # see #2838
-            value = value.decode(self.dialect.encoding).replace("'", "''")
-            return "'%s'" % value
 
-        else:
-            raise NotImplementedError(
-                        "Don't know how to literal-quote value %r" % value)
+        processor = type_._cached_literal_processor(self.dialect)
+        if processor:
+            value = processor(value)
+        return value
 
     def _truncate_bindparam(self, bindparam):
         if bindparam in self.bind_names:

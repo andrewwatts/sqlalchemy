@@ -958,7 +958,7 @@ class PGCompiler(compiler.SQLCompiler):
                 (self.process(binary.left, **kw),
                     self.process(binary.right, **kw)) \
                 + (escape and
-                        (' ESCAPE ' + self.render_literal_value(escape, None))
+                        (' ESCAPE ' + self.render_literal_value(escape, sqltypes.String()))
                         or '')
 
     def visit_notilike_op_binary(self, binary, operator, **kw):
@@ -967,7 +967,7 @@ class PGCompiler(compiler.SQLCompiler):
                 (self.process(binary.left, **kw),
                     self.process(binary.right, **kw)) \
                 + (escape and
-                        (' ESCAPE ' + self.render_literal_value(escape, None))
+                        (' ESCAPE ' + self.render_literal_value(escape, sqltypes.String()))
                         or '')
 
     def render_literal_value(self, value, type_):

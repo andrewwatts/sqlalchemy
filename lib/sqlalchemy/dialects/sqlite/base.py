@@ -211,6 +211,13 @@ class DATETIME(_DateTimeMixin, sqltypes.DateTime):
                 "%(hour)02d:%(minute)02d:%(second)02d"
             )
 
+
+    def literal_processor(self, dialect):
+        bp = self.bind_processor(dialect)
+        def process(value):
+            return "'%s'" % bp(value)
+        return process
+
     def bind_processor(self, dialect):
         datetime_datetime = datetime.datetime
         datetime_date = datetime.date
@@ -287,6 +294,9 @@ class DATE(_DateTimeMixin, sqltypes.Date):
 
     _storage_format = "%(year)04d-%(month)02d-%(day)02d"
 
+    def literal_processor(self, dialect):
+        return self.bind_processor(dialect)
+
     def bind_processor(self, dialect):
         datetime_date = datetime.date
         format = self._storage_format
@@ -357,6 +367,9 @@ class TIME(_DateTimeMixin, sqltypes.Time):
             assert 'regexp' not in kwargs, "You can specify only one of "\
                 "truncate_microseconds or regexp."
             self._storage_format = "%(hour)02d:%(minute)02d:%(second)02d"
+
+    def literal_processor(self, dialect):
+        return self.bind_processor(dialect)
 
     def bind_processor(self, dialect):
         datetime_time = datetime.time
