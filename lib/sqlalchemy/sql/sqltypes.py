@@ -353,7 +353,7 @@ class Integer(_DateAffinity, TypeEngine):
 
     def literal_processor(self, dialect):
         def process(value):
-            return repr(value)
+            return str(value)
         return process
 
     @util.memoized_property
@@ -493,12 +493,8 @@ class Numeric(_DateAffinity, TypeEngine):
         return dbapi.NUMBER
 
     def literal_processor(self, dialect):
-        if self.asdecimal:
-            def process(value):
-                return str(value)
-        else:
-            def process(value):
-                return repr(value)
+        def process(value):
+            return str(value)
         return process
 
     @property

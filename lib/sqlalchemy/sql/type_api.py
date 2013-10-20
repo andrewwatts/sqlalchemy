@@ -83,6 +83,8 @@ class TypeEngine(Visitable):
         "literal_binds" flag, typically used in DDL generation as well
         as in certain scenarios where backends don't accept bound parameters.
 
+        .. versionadded:: 0.9.0
+
         """
         return None
 
@@ -704,6 +706,9 @@ class TypeDecorator(TypeEngine):
         within a CHECK constraint.
 
         The returned string will be rendered into the output string.
+
+        .. versionadded:: 0.9.0
+
         """
         raise NotImplementedError()
 
@@ -787,6 +792,8 @@ class TypeDecorator(TypeEngine):
 
         Subclasses here will typically override :meth:`.TypeDecorator.process_literal_param`
         instead of this method directly.
+
+        .. versionadded:: 0.9.0
 
         """
         if self._has_literal_processor:

@@ -979,8 +979,10 @@ class SQLCompiler(Compiled):
 
         processor = type_._cached_literal_processor(self.dialect)
         if processor:
-            value = processor(value)
-        return value
+            return processor(value)
+        else:
+            raise NotImplementedError(
+                        "Don't know how to literal-quote value %r" % value)
 
     def _truncate_bindparam(self, bindparam):
         if bindparam in self.bind_names:
@@ -1592,7 +1594,7 @@ class SQLCompiler(Compiled):
 
     def visit_insert(self, insert_stmt, **kw):
         self.isinsert = True
-        colparams = self._get_colparams(insert_stmt)
+        colparams = self._get_colparams(insert_stmt, **kw)
 
         if not colparams and \
                 not self.dialect.supports_default_values and \
@@ -1725,7 +1727,7 @@ class SQLCompiler(Compiled):
         table_text = self.update_tables_clause(update_stmt, update_stmt.table,
                                                extra_froms, **kw)
 
-        colparams = self._get_colparams(update_stmt, extra_froms)
+        colparams = self._get_colparams(update_stmt, extra_froms, **kw)
 
         if update_stmt._hints:
             dialect_hints = dict([
@@ -1794,7 +1796,7 @@ class SQLCompiler(Compiled):
         bindparam._is_crud = True
         return bindparam._compiler_dispatch(self)
 
-    def _get_colparams(self, stmt, extra_tables=None):
+    def _get_colparams(self, stmt, extra_tables=None, **kw):
         """create a set of tuples representing column/string pairs for use
         in an INSERT or UPDATE statement.
 
@@ -1846,9 +1848,9 @@ class SQLCompiler(Compiled):
                     # add it to values() in an "as-is" state,
                     # coercing right side to bound param
                     if elements._is_literal(v):
-                        v = self.process(elements.BindParameter(None, v, type_=k.type))
+                        v = self.process(elements.BindParameter(None, v, type_=k.type), **kw)
                     else:
-                        v = self.process(v.self_group())
+                        v = self.process(v.self_group(), **kw)
 
                     values.append((k, v))
 
@@ -1896,7 +1898,7 @@ class SQLCompiler(Compiled):
                                 c, value, required=value is REQUIRED)
                         else:
                             self.postfetch.append(c)
-                            value = self.process(value.self_group())
+                            value = self.process(value.self_group(), **kw)
                         values.append((c, value))
             # determine tables which are actually
             # to be updated - process onupdate and
@@ -1908,7 +1910,7 @@ class SQLCompiler(Compiled):
                     elif c.onupdate is not None and not c.onupdate.is_sequence:
                         if c.onupdate.is_clause_element:
                             values.append(
-                                (c, self.process(c.onupdate.arg.self_group()))
+                                (c, self.process(c.onupdate.arg.self_group(), **kw))
                             )
                             self.postfetch.append(c)
                         else:
@@ -1934,14 +1936,14 @@ class SQLCompiler(Compiled):
                                     )
                 elif c.primary_key and implicit_returning:
                     self.returning.append(c)
-                    value = self.process(value.self_group())
+                    value = self.process(value.self_group(), **kw)
                 elif implicit_return_defaults and \
                     c in implicit_return_defaults:
                     self.returning.append(c)
-                    value = self.process(value.self_group())
+                    value = self.process(value.self_group(), **kw)
                 else:
                     self.postfetch.append(c)
-                    value = self.process(value.self_group())
+                    value = self.process(value.self_group(), **kw)
                 values.append((c, value))
 
             elif self.isinsert:
@@ -1959,13 +1961,13 @@ class SQLCompiler(Compiled):
                                 if self.dialect.supports_sequences and \
                                     (not c.default.optional or \
                                     not self.dialect.sequences_optional):
-                                    proc = self.process(c.default)
+                                    proc = self.process(c.default, **kw)
                                     values.append((c, proc))
                                 self.returning.append(c)
                             elif c.default.is_clause_element:
                                 values.append(
                                     (c,
-                                    self.process(c.default.arg.self_group()))
+                                    self.process(c.default.arg.self_group(), **kw))
                                 )
                                 self.returning.append(c)
                             else:
@@ -1993,7 +1995,7 @@ class SQLCompiler(Compiled):
                         if self.dialect.supports_sequences and \
                             (not c.default.optional or \
                             not self.dialect.sequences_optional):
-                            proc = self.process(c.default)
+                            proc = self.process(c.default, **kw)
                             values.append((c, proc))
                             if implicit_return_defaults and \
                                 c in implicit_return_defaults:
@@ -2002,7 +2004,7 @@ class SQLCompiler(Compiled):
                                 self.postfetch.append(c)
                     elif c.default.is_clause_element:
                         values.append(
-                            (c, self.process(c.default.arg.self_group()))
+                            (c, self.process(c.default.arg.self_group(), **kw))
                         )
 
                         if implicit_return_defaults and \
@@ -2030,7 +2032,7 @@ class SQLCompiler(Compiled):
                 if c.onupdate is not None and not c.onupdate.is_sequence:
                     if c.onupdate.is_clause_element:
                         values.append(
-                            (c, self.process(c.onupdate.arg.self_group()))
+                            (c, self.process(c.onupdate.arg.self_group(), **kw))
                         )
                         if implicit_return_defaults and \
                             c in implicit_return_defaults:
