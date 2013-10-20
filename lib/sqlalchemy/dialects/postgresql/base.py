@@ -210,7 +210,7 @@ import re
 
 from ... import sql, schema, exc, util
 from ...engine import default, reflection
-from ...sql import compiler, expression, util as sql_util, operators
+from ...sql import compiler, expression, operators
 from ... import types as sqltypes
 
 try:
@@ -955,24 +955,25 @@ class PGCompiler(compiler.SQLCompiler):
     def visit_ilike_op_binary(self, binary, operator, **kw):
         escape = binary.modifiers.get("escape", None)
 
-        # TODO: use ternary here, not "and"/ "or"
-        # TODO: have a String() type set up already, construction is expensive
-        # re-use that of compiler.py
         return '%s ILIKE %s' % \
                 (self.process(binary.left, **kw),
                     self.process(binary.right, **kw)) \
-                + (escape and
-                        (' ESCAPE ' + self.render_literal_value(escape, sqltypes.String()))
-                        or '')
+            + (
+                ' ESCAPE ' +
+                self.render_literal_value(escape, sqltypes.STRINGTYPE)
+                if escape else ''
+            )
 
     def visit_notilike_op_binary(self, binary, operator, **kw):
         escape = binary.modifiers.get("escape", None)
         return '%s NOT ILIKE %s' % \
                 (self.process(binary.left, **kw),
                     self.process(binary.right, **kw)) \
-                + (escape and
-                        (' ESCAPE ' + self.render_literal_value(escape, sqltypes.String()))
-                        or '')
+            + (
+                ' ESCAPE ' +
+                self.render_literal_value(escape, sqltypes.STRINGTYPE)
+                if escape else ''
+            )
 
     def render_literal_value(self, value, type_):
         value = super(PGCompiler, self).render_literal_value(value, type_)
